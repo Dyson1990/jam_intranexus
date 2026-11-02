@@ -60,6 +60,25 @@ class ProtocolError(Exception):
         super().__init__(f"{self.code.name}: {detail}" if detail else self.code.name)
 
 
+def parse_header(data: bytes) -> tuple[int, int, int, bytes, int]:
+    """解析并校验帧头，返回 (version, msg_type, flags, sender_id, payload_len)。
+
+    供流式读取在消费负载前先校验 magic/version/长度上限。
+    """
+    if len(data) < HEADER_SIZE:
+        raise ProtocolError(ErrorCode.INVALID_LENGTH, "frame shorter than header")
+    magic, version, msg_type, flags, sender_id, payload_len = struct.unpack(
+        HEADER_FMT, data[:HEADER_SIZE]
+    )
+    if magic != MAGIC:
+        raise ProtocolError(ErrorCode.BAD_HEADER, "bad magic")
+    if version != VERSION:
+        raise ProtocolError(ErrorCode.BAD_HEADER, f"unsupported version {version}")
+    if payload_len > MAX_PAYLOAD:
+        raise ProtocolError(ErrorCode.INVALID_LENGTH, f"payload_len {payload_len} exceeds max")
+    return version, msg_type, flags, sender_id, payload_len
+
+
 @dataclass(frozen=True)
 class Message:
     sender_id: bytes
@@ -83,17 +102,7 @@ class Message:
 
     @classmethod
     def decode(cls, data: bytes) -> "Message":
-        if len(data) < HEADER_SIZE:
-            raise ProtocolError(ErrorCode.INVALID_LENGTH, "frame shorter than header")
-        magic, version, msg_type, flags, sender_id, payload_len = struct.unpack(
-            HEADER_FMT, data[:HEADER_SIZE]
-        )
-        if magic != MAGIC:
-            raise ProtocolError(ErrorCode.BAD_HEADER, "bad magic")
-        if version != VERSION:
-            raise ProtocolError(ErrorCode.BAD_HEADER, f"unsupported version {version}")
-        if payload_len > MAX_PAYLOAD:
-            raise ProtocolError(ErrorCode.INVALID_LENGTH, f"payload_len {payload_len} exceeds max")
+        version, msg_type, flags, sender_id, payload_len = parse_header(data)
         if len(data) != HEADER_SIZE + payload_len:
             raise ProtocolError(ErrorCode.INVALID_LENGTH, "frame length mismatch")
         return cls(sender_id=sender_id, msg_type=msg_type, payload=data[HEADER_SIZE:], flags=flags, version=version)
