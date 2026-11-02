@@ -7,9 +7,11 @@ PING 并在超时未收到 PONG 时判定断线。断线（对端关闭或心跳
 from __future__ import annotations
 
 import asyncio
+import struct
 import time
 from typing import Callable
 
+from .crypto import FrameCipher
 from .protocol import HEADER_SIZE, Message, MsgType, ProtocolError, parse_header
 
 TCP_PORT = 47900
@@ -38,6 +40,7 @@ class Connection:
         peer_id: bytes | None = None,
         heartbeat_interval: float | None = 10.0,
         heartbeat_timeout: float = 30.0,
+        cipher: FrameCipher | None = None,
     ) -> None:
         self.reader = reader
         self.writer = writer
@@ -45,6 +48,7 @@ class Connection:
         self.peer_id = peer_id
         self.heartbeat_interval = heartbeat_interval
         self.heartbeat_timeout = heartbeat_timeout
+        self.cipher = cipher
         self.router = Router()
         self.on_close: Callable[[], None] | None = None
         self._last_pong = time.monotonic()
@@ -63,6 +67,11 @@ class Connection:
             self._hb_task = asyncio.create_task(self._heartbeat_loop())
 
     async def read_message(self) -> Message:
+        if self.cipher is not None:
+            # 加密态：整帧加密后以 4 字节长度前缀分帧，头/负载一并保密
+            (n,) = struct.unpack(">I", await self.reader.readexactly(4))
+            ciphertext = await self.reader.readexactly(n)
+            return Message.decode(self.cipher.decrypt(ciphertext))
         header = await self.reader.readexactly(HEADER_SIZE)
         _, _, _, _, payload_len = parse_header(header)
         payload = await self.reader.readexactly(payload_len)
@@ -74,7 +83,11 @@ class Connection:
     async def send_message(self, msg: Message) -> None:
         if self._closed:
             raise ConnectionError("connection closed")
-        self.writer.write(msg.encode())
+        if self.cipher is not None:
+            data = self.cipher.encrypt(msg.encode())
+            self.writer.write(struct.pack(">I", len(data)) + data)
+        else:
+            self.writer.write(msg.encode())
         await self.writer.drain()
 
     def close(self) -> None:
@@ -100,7 +113,7 @@ class Connection:
         while not self._closed:
             try:
                 msg = await self.read_message()
-            except (asyncio.IncompleteReadError, ConnectionError, OSError, ProtocolError):
+            except (asyncio.IncompleteReadError, ConnectionError, OSError, ProtocolError, ValueError):
                 break
             if msg.msg_type == MsgType.PING:
                 await self.send(MsgType.PONG)
@@ -166,9 +179,12 @@ async def connect(
     port: int = TCP_PORT,
     heartbeat_interval: float | None = 10.0,
     heartbeat_timeout: float = 30.0,
+    cipher: FrameCipher | None = None,
 ) -> Connection:
     """作为客户端建连，返回已启动的 Connection。"""
     reader, writer = await asyncio.open_connection(host, port)
-    conn = Connection(reader, writer, local_device_id, heartbeat_interval=heartbeat_interval, heartbeat_timeout=heartbeat_timeout)
+    conn = Connection(reader, writer, local_device_id,
+                      heartbeat_interval=heartbeat_interval, heartbeat_timeout=heartbeat_timeout,
+                      cipher=cipher)
     conn.start()
     return conn

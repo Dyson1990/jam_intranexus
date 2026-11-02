@@ -19,11 +19,14 @@ async def wait_until(predicate, timeout: float = 5.0):
         await asyncio.sleep(0.01)
 
 
-async def _pair(tmp_path):
+async def _pair(tmp_path, pair_key=""):
     a = Session(str(tmp_path / "a.db"), tcp_port=48120, discovery_port=48110,
                 broadcast_interval=None, host="127.0.0.1")
     b = Session(str(tmp_path / "b.db"), tcp_port=48121, discovery_port=48111,
                 broadcast_interval=None, host="127.0.0.1")
+    if pair_key:
+        a.set_pair_key(pair_key)
+        b.set_pair_key(pair_key)
     await a.start()
     await b.start()
     return a, b
@@ -68,6 +71,36 @@ def test_send_file(tmp_path):
             data = os.urandom(200_000)
             src.write_bytes(data)
 
+            await a.send_file(b.device_id, str(src))
+            final = recv_dir / "in.bin"
+            await wait_until(lambda: final.exists())
+            assert final.read_bytes() == data
+        finally:
+            await a.stop()
+            await b.stop()
+
+    asyncio.run(run())
+
+
+def test_encrypted_text_and_file(tmp_path):
+    async def run():
+        a, b = await _pair(tmp_path, pair_key="测试密钥")
+        recv_dir = tmp_path / "recv"
+        b.set_save_dir(str(recv_dir))
+        try:
+            a.discovery.send_discover_to("127.0.0.1", b.discovery_port)
+            await wait_until(lambda: any(p["device_id"] == b.device_id for p in a.peers()))
+            await a.connect_peer(b.device_id, "127.0.0.1", tcp_port=b.tcp_port)
+
+            received = []
+            b.on_message = lambda msg, peer: received.append(msg)
+            await a.send_text(b.device_id, "加密消息")
+            await wait_until(lambda: len(received) == 1)
+            assert received[0].text == "加密消息"
+
+            src = tmp_path / "in.bin"
+            data = os.urandom(150_000)
+            src.write_bytes(data)
             await a.send_file(b.device_id, str(src))
             final = recv_dir / "in.bin"
             await wait_until(lambda: final.exists())

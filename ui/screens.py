@@ -226,9 +226,11 @@ class SettingsScreen(Screen):
 
         self.name_input = _input("", "设备名")
         self.dir_input = _input("", "保存目录")
+        self.key_input = _input("", "配对密钥（两端一致；留空=不加密）")
 
         name_lbl = Label(text="设备名", color=DIM, size_hint_y=None, height="24dp", halign="left")
         dir_lbl = Label(text="保存目录", color=DIM, size_hint_y=None, height="24dp", halign="left")
+        key_lbl = Label(text="配对密钥", color=DIM, size_hint_y=None, height="24dp", halign="left")
         root.add_widget(name_lbl)
         root.add_widget(self.name_input)
 
@@ -239,6 +241,9 @@ class SettingsScreen(Screen):
         dir_row.add_widget(browse)
         root.add_widget(dir_lbl)
         root.add_widget(dir_row)
+
+        root.add_widget(key_lbl)
+        root.add_widget(self.key_input)
 
         save_btn = NeonButton(text="保存设置", size_hint_y=None, height="52dp")
         save_btn.bind(on_release=lambda b: self._save())
@@ -259,11 +264,13 @@ class SettingsScreen(Screen):
         s = _app().session
         self.name_input.text = s.name
         self.dir_input.text = s.save_dir
+        self.key_input.text = s.pair_key
 
     def _save(self):
         app = _app()
         app.session.set_name(self.name_input.text.strip() or default_name())
         app.session.set_save_dir(self.dir_input.text.strip() or default_save_dir())
+        app.session.set_pair_key(self.key_input.text.strip())
         app.toast("已保存")
 
     def _confirm_clear(self):

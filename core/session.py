@@ -15,6 +15,7 @@ from typing import Callable
 from plat import default_name, default_save_dir
 from storage.db import Database
 from .connection import TCP_PORT, Connection, TCPServer, connect
+from .crypto import FrameCipher
 from .discovery import DISCOVERY_PORT, DiscoveryService
 from .files import FileReceiver, FileTransfer
 from .messages import ChatMessage, MessageStatus, Messenger
@@ -45,6 +46,8 @@ class Session:
         self.device_id = self._load_device_id()
         self.name = self.db.get_setting("device_name") or default_name()
         self.save_dir = self.db.get_setting("save_dir") or default_save_dir()
+        self.pair_key = self.db.get_setting("pair_key") or ""
+        self.cipher = FrameCipher(self.pair_key) if self.pair_key else None
         self.tcp_port = tcp_port
         self.discovery_port = discovery_port
         self.broadcast_interval = broadcast_interval
@@ -110,6 +113,16 @@ class Session:
         for link in self._links.values():
             link.transfer.save_dir = path
 
+    def set_pair_key(self, key: str) -> None:
+        """设置配对密钥（两端一致才可通信）；留空关闭加密。改密钥使既有连接失效。"""
+        key = key.strip()
+        self.pair_key = key
+        self.cipher = FrameCipher(key) if key else None
+        self.db.set_setting("pair_key", key)
+        for link in list(self._links.values()):
+            link.connection.close()
+        self._links.clear()
+
     def clear_data(self) -> None:
         """清空本地存储，但保留本机设备 ID（节点身份）。"""
         self.db.clear_all()
@@ -118,6 +131,8 @@ class Session:
         self.save_dir = default_save_dir()
         self.db.set_setting("device_name", self.name)
         self.db.set_setting("save_dir", self.save_dir)
+        self.pair_key = ""
+        self.cipher = None
         self.discovery.name = self.name
         for link in self._links.values():
             link.transfer.save_dir = self.save_dir
@@ -145,13 +160,15 @@ class Session:
         link = self._links.get(peer_id)
         if link is not None and not link.connection.closed:
             return link
-        conn = await connect(self.device_id, address, tcp_port or self.tcp_port)
+        conn = await connect(self.device_id, address, tcp_port or self.tcp_port, cipher=self.cipher)
         conn.peer_id = peer_id
         self._attach(conn, peer_id, name)
         await conn.send(MsgType.PAIR_REQUEST, self.name.encode("utf-8"))
         return self._links[peer_id]
 
     def _on_incoming_conn(self, conn: Connection) -> None:
+        # 在 server 启动接收循环前为入站连接套用加密（on_connect 先于 start 触发）
+        conn.cipher = self.cipher
         conn.router.register(MsgType.PAIR_REQUEST, lambda msg: self._on_pair_request(conn, msg))
 
     def _on_pair_request(self, conn: Connection, msg: Message) -> None:
