@@ -12,17 +12,17 @@ requirements = python3,kivy
 orientation = all
 fullscreen = 0
 
-[buildozer]
-log_level = 2
-warn_on_root = 1
-
-# Android SDK/NDK 版本（可由 buildozer 自动下载）
+# 以下 android.* 必须位于 [app] 段——buildozer 只从该段读取，放错段会被静默忽略
 android.api = 33
 android.minapi = 21
-android.ndk = 25b
+android.ndk = 28c
 android.archs = armeabi-v7a, arm64-v8a
 android.accept_sdk_license = True
 
 # 权限：网络 + 多播锁 + 旧版外部存储
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,CHANGE_WIFI_MULTICAST_STATE,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 android.allow_backup = True
+
+[buildozer]
+log_level = 2
+warn_on_root = 1
