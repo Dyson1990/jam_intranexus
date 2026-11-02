@@ -23,12 +23,26 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
-python main.py          # 桌面端运行（阶段三后可用）
+python main.py          # 桌面端运行
 ```
 
-打包（阶段五）：
-- Windows EXE：`pyinstaller jam_intranexus.spec`
-- Android APK：`buildozer android debug`（需 Linux 或 WSL）
+打包：
+- Windows EXE（已验证可运行）：
+  ```bash
+  pip install pyinstaller
+  pyinstaller --noconfirm --clean jam_intranexus.spec
+  # 产物在 dist/jam_intranexus/jam_intranexus.exe
+  ```
+- Android APK（需 Linux 或 WSL + Android SDK/NDK）：
+  ```bash
+  buildozer android debug
+  ```
+
+## 已知限制
+- Android 部分 ROM 会丢弃 UDP 广播，需 MulticastLock；若发现失败，用「手动 IP」兜底。
+- Android 10+ 的存储分区限制下，保存目录建议使用默认下载目录；SAF 目录写入能力受限。
+- 断点续传/断网恢复/重启恢复已通过单测与回环集成测试，但跨真机验收（5.3/5.4）仍需在
+  Android 真机 + Windows 主机上执行。
 
 ## 文档
 - `FEASIBILITY.md` — 可行性分析与调研

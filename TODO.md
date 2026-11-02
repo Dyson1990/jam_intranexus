@@ -115,18 +115,18 @@
   - 优先级：P0
   - 依赖：4.4
   - 验收：APK 安装并前台运行
-  - 阻塞：—
+  - 阻塞：需 Linux/WSL + Android SDK/NDK；buildozer.spec 已就绪，命令 `buildozer android debug`
 - [ ] 5.3 跨平台双向消息验收
   - 优先级：P0
   - 依赖：5.1、5.2
   - 验收：Android ↔ Windows 双向消息收发
-  - 阻塞：—
+  - 阻塞：需 Android 真机 + Windows 主机
 - [ ] 5.4 跨平台双向文件传输 + 断点续传 + 断网恢复 + 重启恢复验收
   - 优先级：P0
   - 依赖：5.3
   - 验收：大文件续传、断网恢复、重启续传均通过
-  - 阻塞：—
-- [ ] 5.5 更新 TODO.md 与 README.md
+  - 阻塞：需 Android 真机 + Windows 主机
+- [x] 5.5 更新 TODO.md 与 README.md
   - 优先级：P2
   - 依赖：5.4
   - 验收：文档反映最终状态与已知限制
