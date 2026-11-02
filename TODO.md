@@ -13,7 +13,7 @@
   - 依赖：1.1
   - 验收：TODO.md 五阶段任务清晰、可验证；AGENTS.md 记录开发规范
   - 阻塞：—
-- [ ] 1.3 建立 `.venv` 并安装 requirements.txt 依赖
+- [x] 1.3 建立 `.venv` 并安装 requirements.txt 依赖
   - 优先级：P0
   - 依赖：1.2
   - 验收：`.venv` 内可 `import kivy, pytest`；`.venv` 被 git 忽略
