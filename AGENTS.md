@@ -13,8 +13,9 @@
 - `requirements.txt` 为唯一依赖清单。
 
 ## 结构
-- 目录职责清晰（`core/` 网络与协议、`storage/` 数据、`ui/` 界面、`platform/` 平台适配），
+- 目录职责清晰（`core/` 网络与协议、`storage/` 数据、`ui/` 界面、`plat/` 平台适配），
   避免过度拆分；可按实现微调但保持职责单一。
+  > 平台适配包命名为 `plat/` 而非 `platform/`，避免与标准库 `platform` 模块冲突（PyInstaller 依赖后者）。
 
 ## 代码规范
 - 使用 Python 类型注解；关键函数写简洁中文 docstring/注释；复杂网络协议加注释。

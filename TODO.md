@@ -106,7 +106,7 @@
   - 阻塞：需 Linux/WSL + Android SDK/NDK，本机无法执行
 
 ## 阶段五 — 打包与验收
-- [ ] 5.1 生成 Windows EXE（PyInstaller）
+- [x] 5.1 生成 Windows EXE（PyInstaller）
   - 优先级：P0
   - 依赖：4.1
   - 验收：EXE 在无开发环境的 Win10/11 运行

@@ -15,7 +15,7 @@ from kivy.uix.screenmanager import Screen
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 
-from platform import default_name, default_save_dir, pick_directory, pick_file, setup_hints
+from plat import default_name, default_save_dir, pick_directory, pick_file, setup_hints
 from .theme import CYAN, DANGER, DIM, MAGENTA, PANEL, TEXT, NeonButton
 
 

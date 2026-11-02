@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
-from platform import default_name, default_save_dir
+from plat import default_name, default_save_dir
 from storage.db import Database
 from .connection import TCP_PORT, Connection, TCPServer, connect
 from .discovery import DISCOVERY_PORT, DiscoveryService

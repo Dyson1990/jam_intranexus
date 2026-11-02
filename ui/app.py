@@ -87,7 +87,7 @@ class IntranexusApp(App):
 
     def on_start(self):
         from core.session import Session
-        from platform import acquire_multicast_lock, request_permissions
+        from plat import acquire_multicast_lock, request_permissions
 
         db_dir = self.user_data_dir or os.path.join(os.path.expanduser("~"), ".jam_intranexus")
         os.makedirs(db_dir, exist_ok=True)
@@ -105,7 +105,7 @@ class IntranexusApp(App):
         self._post(lambda: self._screen("settingsscreen").refresh())
 
     def on_stop(self):
-        from platform import release_multicast_lock
+        from plat import release_multicast_lock
 
         if getattr(self, "session", None) is not None:
             try:
