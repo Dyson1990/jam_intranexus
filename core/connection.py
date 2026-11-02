@@ -7,6 +7,7 @@ PING 并在超时未收到 PONG 时判定断线。断线（对端关闭或心跳
 from __future__ import annotations
 
 import asyncio
+import logging
 import struct
 import time
 from typing import Callable
@@ -15,6 +16,8 @@ from .crypto import FrameCipher
 from .protocol import HEADER_SIZE, Message, MsgType, ProtocolError, parse_header
 
 TCP_PORT = 47900
+
+log = logging.getLogger("connection")
 
 
 class Router:
@@ -113,7 +116,10 @@ class Connection:
         while not self._closed:
             try:
                 msg = await self.read_message()
-            except (asyncio.IncompleteReadError, ConnectionError, OSError, ProtocolError, ValueError):
+            except ValueError:
+                log.warning("decryption/auth failed, closing connection")
+                break
+            except (asyncio.IncompleteReadError, ConnectionError, OSError, ProtocolError):
                 break
             if msg.msg_type == MsgType.PING:
                 await self.send(MsgType.PONG)

@@ -7,6 +7,7 @@ PAIR_REQUEST/PAIR_RESPONSE 握手交换，入站连接据此绑定 peer_id。
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import time
 from dataclasses import dataclass
@@ -20,6 +21,8 @@ from .discovery import DISCOVERY_PORT, DiscoveryService
 from .files import FileReceiver, FileTransfer
 from .messages import ChatMessage, MessageStatus, Messenger
 from .protocol import Message, MsgType
+
+log = logging.getLogger("session")
 
 
 @dataclass
@@ -69,12 +72,14 @@ class Session:
 
     # ---- 生命周期 ----
     async def start(self) -> None:
+        log.info("session start device=%s port=%s", self.device_id.hex(), self.tcp_port)
         await self.discovery.start()
         await self.server.start()
         if self.broadcast_interval is not None:
             self._tasks.append(asyncio.create_task(self._broadcast_loop()))
 
     async def stop(self) -> None:
+        log.info("session stop")
         for t in self._tasks:
             t.cancel()
         for link in list(self._links.values()):
@@ -164,6 +169,7 @@ class Session:
         conn.peer_id = peer_id
         self._attach(conn, peer_id, name)
         await conn.send(MsgType.PAIR_REQUEST, self.name.encode("utf-8"))
+        log.info("connected peer=%s address=%s", peer_id.hex(), address)
         return self._links[peer_id]
 
     def _on_incoming_conn(self, conn: Connection) -> None:
@@ -205,6 +211,7 @@ class Session:
         link = self._links.get(peer_id)
         if link is not None and link.connection is conn:
             del self._links[peer_id]
+        log.info("peer disconnected %s", peer_id.hex())
         if self.on_peers_changed is not None:
             self.on_peers_changed()
 

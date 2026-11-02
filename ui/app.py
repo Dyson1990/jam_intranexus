@@ -86,11 +86,14 @@ class IntranexusApp(App):
         return RootWidget()
 
     def on_start(self):
+        from core.logging_setup import install_asyncio_handler, setup_logging
         from core.session import Session
         from plat import acquire_multicast_lock, request_permissions
 
         db_dir = self.user_data_dir or os.path.join(os.path.expanduser("~"), ".jam_intranexus")
         os.makedirs(db_dir, exist_ok=True)
+        setup_logging(db_dir)
+        install_asyncio_handler(asyncio.get_running_loop())
         acquire_multicast_lock()
         request_permissions()
         self.session = Session(os.path.join(db_dir, "data.db"))
