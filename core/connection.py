@@ -1,8 +1,8 @@
-"""异步 TCP 连接管理：帧收发、心跳与断线检测。
+"""异步 TCP 连接管理：帧收发、心跳、断线检测与按类型消息分发。
 
 每个 Connection 对应一条已建立的 TCP 连接，内部跑接收循环；心跳循环按周期发
 PING 并在超时未收到 PONG 时判定断线。断线（对端关闭或心跳超时）统一触发
-``on_close`` 回调。
+``on_close``。业务层通过 ``Router`` 按消息类型注册处理器。
 """
 from __future__ import annotations
 
@@ -13,6 +13,20 @@ from typing import Callable
 from .protocol import HEADER_SIZE, Message, MsgType, ProtocolError, parse_header
 
 TCP_PORT = 47900
+
+
+class Router:
+    """按消息类型分发到注册的处理器（同一类型可有多个）。"""
+
+    def __init__(self) -> None:
+        self._handlers: dict[int, list[Callable[[Message], None]]] = {}
+
+    def register(self, msg_type: int, handler: Callable[[Message], None]) -> None:
+        self._handlers.setdefault(msg_type, []).append(handler)
+
+    def dispatch(self, msg: Message) -> None:
+        for handler in self._handlers.get(msg.msg_type, ()):
+            handler(msg)
 
 
 class Connection:
@@ -31,7 +45,7 @@ class Connection:
         self.peer_id = peer_id
         self.heartbeat_interval = heartbeat_interval
         self.heartbeat_timeout = heartbeat_timeout
-        self.on_message: Callable[[Message], None] | None = None
+        self.router = Router()
         self.on_close: Callable[[], None] | None = None
         self._last_pong = time.monotonic()
         self._closed = False
@@ -92,8 +106,8 @@ class Connection:
                 await self.send(MsgType.PONG)
             elif msg.msg_type == MsgType.PONG:
                 self._last_pong = time.monotonic()
-            elif self.on_message is not None:
-                self.on_message(msg)
+            else:
+                self.router.dispatch(msg)
         self.close()
 
     async def _heartbeat_loop(self) -> None:
@@ -113,7 +127,6 @@ class TCPServer:
         self.device_id = device_id
         self.host = host
         self.port = port
-        self.on_message: Callable[[Message], None] | None = None
         self.on_close: Callable[[Connection], None] | None = None
         self.connections: set[Connection] = set()
         self._server: asyncio.Server | None = None
@@ -132,7 +145,6 @@ class TCPServer:
 
     async def _on_connect(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         conn = Connection(reader, writer, self.device_id)
-        conn.on_message = self.on_message
         conn.on_close = lambda: self._on_conn_close(conn)
         self.connections.add(conn)
         conn.start()

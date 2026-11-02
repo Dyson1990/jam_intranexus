@@ -69,7 +69,8 @@ class Messenger:
         self.on_text = on_text
         self.on_status = on_status
         self._outgoing: dict[bytes, ChatMessage] = {}
-        connection.on_message = self._handle
+        connection.router.register(MsgType.TEXT, self._handle_text)
+        connection.router.register(MsgType.TEXT_ACK, self._handle_ack)
 
     async def send_text(self, text: str) -> ChatMessage:
         msg = ChatMessage(message_id=os.urandom(16), text=text, status=MessageStatus.SENT)
@@ -80,19 +81,19 @@ class Messenger:
     def pending(self) -> list[ChatMessage]:
         return list(self._outgoing.values())
 
-    def _handle(self, frame: Message) -> None:
-        if frame.msg_type == MsgType.TEXT:
-            message_id, _ts, text = decode_text(frame.payload)
-            asyncio.get_running_loop().create_task(self._ack(message_id))
-            if self.on_text is not None:
-                self.on_text(ChatMessage(message_id=message_id, text=text, sender_id=frame.sender_id))
-        elif frame.msg_type == MsgType.TEXT_ACK:
-            message_id, status = decode_ack(frame.payload)
-            msg = self._outgoing.get(message_id)
-            if msg is not None:
-                msg.status = status
-                if self.on_status is not None:
-                    self.on_status(msg)
+    def _handle_text(self, frame: Message) -> None:
+        message_id, _ts, text = decode_text(frame.payload)
+        asyncio.get_running_loop().create_task(self._ack(message_id))
+        if self.on_text is not None:
+            self.on_text(ChatMessage(message_id=message_id, text=text, sender_id=frame.sender_id))
+
+    def _handle_ack(self, frame: Message) -> None:
+        message_id, status = decode_ack(frame.payload)
+        msg = self._outgoing.get(message_id)
+        if msg is not None:
+            msg.status = status
+            if self.on_status is not None:
+                self.on_status(msg)
 
     async def _ack(self, message_id: bytes) -> None:
         try:

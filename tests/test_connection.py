@@ -28,14 +28,14 @@ def test_connect_and_bidirectional_message():
             sconn = next(iter(server.connections))
 
             received: list[bytes] = []
-            conn.on_message = lambda m: received.append(m.payload)
+            conn.router.register(MsgType.TEXT, lambda m: received.append(m.payload))
             await sconn.send(MsgType.TEXT, b"hello-from-server")
             await wait_until(lambda: len(received) == 1)
             assert received[0] == b"hello-from-server"
 
             # 反向：客户端发给服务端
             sreceived: list[bytes] = []
-            sconn.on_message = lambda m: sreceived.append(m.payload)
+            sconn.router.register(MsgType.TEXT, lambda m: sreceived.append(m.payload))
             await conn.send(MsgType.TEXT, b"hello-from-client")
             await wait_until(lambda: len(sreceived) == 1)
             assert sreceived[0] == b"hello-from-client"
