@@ -115,6 +115,8 @@ class DiscoveryService:
         self._transport.sendto(frame, addr)
 
     def _record_presence(self, msg: Message, addr: tuple[str, int]) -> None:
+        if msg.sender_id == self.device_id:
+            return  # 忽略自身广播回环
         self._peers[msg.sender_id] = Peer(
             device_id=msg.sender_id,
             name=msg.payload.decode("utf-8", errors="replace"),

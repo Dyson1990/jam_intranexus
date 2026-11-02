@@ -1,12 +1,18 @@
-"""Kivy 应用：赛博朋克主题 + 四大页面导航。"""
+"""Kivy 应用：赛博朋克主题 + 四大页面导航 + 会话后端接线。"""
 from __future__ import annotations
 
+import asyncio
+import os
+
 from kivy.app import App
+from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.popup import Popup
 
 from .screens import ChatScreen, DeviceListScreen, SettingsScreen, TransferScreen
-from .theme import BLUE, CYAN, DIM, MAGENTA, PANEL, PANEL_LIGHT, TEXT
+from .theme import BG, CYAN, DIM, MAGENTA, PANEL, TEXT
 
 KV = """
 #:import BG ui.theme.BG
@@ -14,62 +20,6 @@ KV = """
 #:import CYAN ui.theme.CYAN
 #:import MAGENTA ui.theme.MAGENTA
 #:import TEXT ui.theme.TEXT
-#:import DIM ui.theme.DIM
-
-<ScreenTitle@Label>:
-    font_size: '22sp'
-    bold: True
-    color: CYAN
-    size_hint_y: None
-    height: '48dp'
-    halign: 'left'
-    text_size: self.size
-
-<Placeholder@Label>:
-    color: DIM
-    font_size: '16sp'
-    halign: 'center'
-    valign: 'middle'
-
-<DeviceListScreen>:
-    BoxLayout:
-        orientation: 'vertical'
-        padding: '16dp'
-        spacing: '12dp'
-        ScreenTitle:
-            text: '设备'
-        Placeholder:
-            text: '局域网设备将在此显示'
-
-<ChatScreen>:
-    BoxLayout:
-        orientation: 'vertical'
-        padding: '16dp'
-        spacing: '12dp'
-        ScreenTitle:
-            text: '消息'
-        Placeholder:
-            text: '选择设备开始聊天'
-
-<TransferScreen>:
-    BoxLayout:
-        orientation: 'vertical'
-        padding: '16dp'
-        spacing: '12dp'
-        ScreenTitle:
-            text: '传输'
-        Placeholder:
-            text: '文件传输任务将在此显示'
-
-<SettingsScreen>:
-    BoxLayout:
-        orientation: 'vertical'
-        padding: '16dp'
-        spacing: '12dp'
-        ScreenTitle:
-            text: '设置'
-        Placeholder:
-            text: '设备名 / 保存目录 / 配对密钥'
 
 <RootWidget>:
     orientation: 'vertical'
@@ -82,9 +32,13 @@ KV = """
     ScreenManager:
         id: sm
         DeviceListScreen:
+            name: 'devicelistscreen'
         ChatScreen:
+            name: 'chatscreen'
         TransferScreen:
+            name: 'transferscreen'
         SettingsScreen:
+            name: 'settingsscreen'
     BoxLayout:
         id: nav
         size_hint_y: None
@@ -126,4 +80,78 @@ class IntranexusApp(App):
 
     def build(self):
         Builder.load_string(KV)
+        self.current_peer_id = None
+        self.current_peer_name = ""
+        self.current_peer_address = ""
         return RootWidget()
+
+    def on_start(self):
+        from core.session import Session
+
+        db_dir = self.user_data_dir or os.path.join(os.path.expanduser("~"), ".jam_intranexus")
+        os.makedirs(db_dir, exist_ok=True)
+        self.session = Session(os.path.join(db_dir, "data.db"))
+        self.session.on_peers_changed = lambda: self._post(self._refresh_devices)
+        self.session.on_message = lambda msg, peer: self._post(lambda: self._on_message(msg, peer))
+        self.session.on_status = lambda msg, peer: self._post(lambda: self._on_message(msg, peer))
+        self.session.on_transfer_changed = lambda: self._post(self._refresh_transfers)
+        self.call_async(self.session.start())
+        # 各页面初始刷新
+        self._post(self._refresh_devices)
+        self._post(self._refresh_transfers)
+        self._post(lambda: self._screen("settingsscreen").refresh())
+
+    def on_stop(self):
+        if getattr(self, "session", None) is not None:
+            try:
+                self.session.db.close()
+            except Exception:
+                pass
+
+    # ---- 工具 ----
+    def call_async(self, coro) -> None:
+        asyncio.ensure_future(coro)
+
+    def _post(self, fn) -> None:
+        Clock.schedule_once(lambda dt: fn())
+
+    def _screen(self, name):
+        return self.root.ids.sm.get_screen(name)
+
+    def toast(self, text: str) -> None:
+        popup = Popup(title="提示", content=Label(text=text, color=TEXT, halign="center", valign="middle"),
+                      size_hint=(0.7, 0.25))
+        popup.open()
+        Clock.schedule_once(lambda dt: popup.dismiss(), 2.0)
+
+    # ---- 分发 ----
+    def _refresh_devices(self):
+        self._screen("devicelistscreen").refresh()
+
+    def _refresh_transfers(self):
+        self._screen("transferscreen").refresh()
+
+    def _on_message(self, msg, peer):
+        if peer == self.current_peer_id:
+            self._screen("chatscreen").refresh()
+
+    # ---- 导航 ----
+    def open_chat(self, peer_id, name, address):
+        self.current_peer_id = peer_id
+        self.current_peer_name = name
+        self.current_peer_address = address
+        if self.session.link_for(peer_id) is None:
+            self._ensure_connected(peer_id, address, name)
+        self.root.ids.sm.current = "chatscreen"
+        self._screen("chatscreen").refresh()
+
+    def _ensure_connected(self, peer_id, address, name):
+        async def go():
+            try:
+                await self.session.connect_peer(peer_id, address, name)
+            except Exception as e:
+                self._post(lambda: self.toast(f"连接失败: {e}"))
+            else:
+                self._post(self._refresh_devices)
+
+        self.call_async(go())

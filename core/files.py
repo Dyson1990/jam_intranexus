@@ -210,6 +210,21 @@ class FileReceiver:
         self.cancelled = True
         self._queue.put_nowait(None)
 
+    def cancel(self) -> None:
+        """本地主动取消接收，并通知发送方停止。"""
+        self.cancelled = True
+        self._queue.put_nowait(None)
+        try:
+            asyncio.get_running_loop().create_task(self._send_cancel())
+        except RuntimeError:
+            pass  # 无事件循环（测试同步路径）时仅本地停止
+
+    async def _send_cancel(self) -> None:
+        try:
+            await self.connection.send(MsgType.FILE_CANCEL, encode_cancel(self.file_id))
+        except (ConnectionError, AttributeError):
+            pass  # 连接已断或无连接（测试）
+
     async def run(self) -> None:
         os.makedirs(self.save_dir, exist_ok=True)
         mode = "r+b" if self.offset > 0 else "w+b"
@@ -279,8 +294,9 @@ class FileTransfer:
         path: str,
         chunk_size: int = CHUNK_SIZE,
         on_progress: Callable[[int, int], None] | None = None,
+        file_id: bytes | None = None,
     ) -> FileSender:
-        sender = FileSender(self.connection, path, chunk_size=chunk_size, on_progress=on_progress)
+        sender = FileSender(self.connection, path, file_id=file_id, chunk_size=chunk_size, on_progress=on_progress)
         self._senders[sender.file_id] = sender
         try:
             await sender.run()

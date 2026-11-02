@@ -127,6 +127,7 @@ class TCPServer:
         self.device_id = device_id
         self.host = host
         self.port = port
+        self.on_connect: Callable[[Connection], None] | None = None
         self.on_close: Callable[[Connection], None] | None = None
         self.connections: set[Connection] = set()
         self._server: asyncio.Server | None = None
@@ -145,6 +146,8 @@ class TCPServer:
 
     async def _on_connect(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         conn = Connection(reader, writer, self.device_id)
+        if self.on_connect is not None:
+            self.on_connect(conn)
         conn.on_close = lambda: self._on_conn_close(conn)
         self.connections.add(conn)
         conn.start()

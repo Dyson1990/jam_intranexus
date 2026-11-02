@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from kivy.properties import ListProperty
+from kivy.uix.button import Button
 from kivy.uix.togglebutton import ToggleButton
 
 # 背景与面板
@@ -16,6 +17,23 @@ BLUE = (0.2, 0.5, 1.0, 1)
 TEXT = (0.86, 0.93, 1.0, 1)
 DIM = (0.45, 0.6, 0.75, 1)
 DANGER = (1.0, 0.25, 0.45, 1)
+
+
+class NeonButton(Button):
+    """普通霓虹按钮：去掉默认背景，用主题色填充。"""
+
+    accent = ListProperty(list(CYAN))
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.background_normal = ""
+        self.background_down = ""
+        self.background_color = PANEL_LIGHT
+        self.color = TEXT
+        self.bind(accent=self._tint)
+
+    def _tint(self, *args):
+        self.background_color = (*self.accent[:3], 0.35)
 
 
 class NeonToggle(ToggleButton):
