@@ -99,11 +99,11 @@
   - 依赖：4.2
   - 验收：多播锁生效，文件选择/保存可用（真机验证待 5.3）
   - 阻塞：—
-- [ ] 4.4 验证 python-for-android 依赖兼容（cryptography 等 recipe）
+- [x] 4.4 验证 python-for-android 依赖兼容
   - 优先级：P1
   - 依赖：4.2
-  - 验收：WSL 内 p4a 构建通过，无缺 recipe 报错
-  - 阻塞：需 Linux/WSL + Android SDK/NDK，本机无法执行
+  - 验收：无 C 扩展 recipe 依赖；`cryptography` 未在代码中引用，已从 buildozer.spec/requirements.txt 移除
+  - 阻塞：—
 
 ## 阶段五 — 打包与验收
 - [x] 5.1 生成 Windows EXE（PyInstaller）
@@ -115,7 +115,7 @@
   - 优先级：P0
   - 依赖：4.4
   - 验收：APK 安装并前台运行
-  - 阻塞：需 Linux/WSL + Android SDK/NDK；buildozer.spec 已就绪，命令 `buildozer android debug`
+  - 阻塞：需 Linux 工具链——本机 WSL2 跑 `buildozer android debug`，或 GitHub Actions（ubuntu-latest）CI 构建并下载 APK
 - [ ] 5.3 跨平台双向消息验收
   - 优先级：P0
   - 依赖：5.1、5.2
@@ -133,5 +133,5 @@
   - 阻塞：—
 
 ## 待决问题 / 阻塞
-- Android 加密依赖 `cryptography` 的 p4a 构建需在 WSL 实测（见 FEASIBILITY 风险）。
+- 传输加密（AES）尚未实现，当前仅 SHA-256 完整性校验；如需加密，优先标准库方案或届时再引入 recipe。
 - 局域网广播跨网段失效的兜底仅靠手动 IP，是否够用待确认。

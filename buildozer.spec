@@ -6,8 +6,8 @@ source.dir = .
 source.include_exts = py,kv
 version = 0.1.0
 
-# 仅运行时依赖：cryptography 提供传输加密；asyncio 为标准库，勿列入（见 FEASIBILITY）
-requirements = python3,kivy,cryptography
+# 仅运行时依赖；asyncio 为标准库，勿列入。cryptography 未在代码中引用，已移除（见 FEASIBILITY 回退）
+requirements = python3,kivy
 
 orientation = all
 fullscreen = 0
