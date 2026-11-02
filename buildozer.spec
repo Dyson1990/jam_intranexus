@@ -16,8 +16,12 @@ fullscreen = 0
 
 # 以下 android.* 必须位于 [app] 段——buildozer 只从该段读取，放错段会被静默忽略
 android.api = 33
-android.minapi = 21
+# minapi/ndk_api 须 >= 26：bionic 的 grp.h 仅在 __ANDROID_API__ >= 26 声明
+# setgrent/getgrent/endgrent，而 CPython 3.12 的 grpmodule.c 无条件编译它们。
+# 若按 21 编译会 "undeclared function" 崩在原生编译阶段。
+android.minapi = 26
 android.ndk = 28c
+android.ndk_api = 26
 android.archs = armeabi-v7a, arm64-v8a
 android.accept_sdk_license = True
 
