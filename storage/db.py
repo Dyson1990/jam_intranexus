@@ -150,3 +150,27 @@ class Database:
     def get_setting(self, key: str, default: str | None = None) -> str | None:
         row = self._conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
         return row["value"] if row else default
+
+    # ---- 清空 ----
+    def clear_messages(self) -> None:
+        self._conn.execute("DELETE FROM messages")
+        self._conn.commit()
+
+    def clear_devices(self) -> None:
+        self._conn.execute("DELETE FROM devices")
+        self._conn.commit()
+
+    def clear_transfers(self) -> None:
+        self._conn.execute("DELETE FROM transfers")
+        self._conn.commit()
+
+    def clear_settings(self) -> None:
+        self._conn.execute("DELETE FROM settings")
+        self._conn.commit()
+
+    def clear_all(self) -> None:
+        """清空全部本地存储数据（设备/消息/传输/设置）。"""
+        self.clear_messages()
+        self.clear_devices()
+        self.clear_transfers()
+        self.clear_settings()

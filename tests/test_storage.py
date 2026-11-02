@@ -71,6 +71,34 @@ def test_settings(tmp_path):
         db.close()
 
 
+def test_clear_all(tmp_path):
+    db = Database(str(tmp_path / "t.db"))
+    try:
+        db.upsert_device(rand_id(), "d1")
+        db.add_message(rand_id(), rand_id(), "hello", 1.0, "sent", 1)
+        db.add_transfer(rand_id(), "a.bin", "receive", 100)
+        db.set_setting("save_dir", "C:/x")
+        db.clear_all()
+        assert db.list_devices() == []
+        assert db.list_messages(rand_id()) == []
+        assert db.list_transfers() == []
+        assert db.get_setting("save_dir") is None
+    finally:
+        db.close()
+
+
+def test_clear_messages_only(tmp_path):
+    db = Database(str(tmp_path / "t.db"))
+    try:
+        db.upsert_device(rand_id(), "d1")
+        db.add_message(rand_id(), rand_id(), "hello", 1.0, "sent", 1)
+        db.clear_messages()
+        assert db.list_devices()  # 设备记录保留
+        assert db.list_messages(rand_id()) == []
+    finally:
+        db.close()
+
+
 def test_persistence_across_reopen(tmp_path):
     path = str(tmp_path / "t.db")
     db = Database(path)
