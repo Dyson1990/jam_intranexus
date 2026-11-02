@@ -19,6 +19,24 @@ DIM = (0.45, 0.6, 0.75, 1)
 DANGER = (1.0, 0.25, 0.45, 1)
 
 
+def register_cjk_font() -> None:
+    """默认 Roboto 无中文字形，中文会渲染成方框；改用系统 CJK 字体。"""
+    import os
+
+    from kivy.core.text import LabelBase
+
+    candidates = [
+        r"C:\Windows\Fonts\msyh.ttc",
+        r"C:\Windows\Fonts\simhei.ttf",
+        "/system/fonts/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            LabelBase.register(name="Roboto", fn_regular=path)
+            return
+
+
 class NeonButton(Button):
     """普通霓虹按钮：去掉默认背景，用主题色填充。"""
 

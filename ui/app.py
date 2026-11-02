@@ -12,7 +12,7 @@ from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 
 from .screens import ChatScreen, DeviceListScreen, SettingsScreen, TransferScreen
-from .theme import BG, CYAN, DIM, MAGENTA, PANEL, TEXT
+from .theme import BG, CYAN, DIM, MAGENTA, PANEL, TEXT, register_cjk_font
 
 KV = """
 #:import BG ui.theme.BG
@@ -79,6 +79,7 @@ class IntranexusApp(App):
     title = "jam_intranexus"
 
     def build(self):
+        register_cjk_font()
         Builder.load_string(KV)
         self.current_peer_id = None
         self.current_peer_name = ""
