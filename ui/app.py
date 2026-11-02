@@ -87,9 +87,12 @@ class IntranexusApp(App):
 
     def on_start(self):
         from core.session import Session
+        from platform import acquire_multicast_lock, request_permissions
 
         db_dir = self.user_data_dir or os.path.join(os.path.expanduser("~"), ".jam_intranexus")
         os.makedirs(db_dir, exist_ok=True)
+        acquire_multicast_lock()
+        request_permissions()
         self.session = Session(os.path.join(db_dir, "data.db"))
         self.session.on_peers_changed = lambda: self._post(self._refresh_devices)
         self.session.on_message = lambda msg, peer: self._post(lambda: self._on_message(msg, peer))
@@ -102,11 +105,14 @@ class IntranexusApp(App):
         self._post(lambda: self._screen("settingsscreen").refresh())
 
     def on_stop(self):
+        from platform import release_multicast_lock
+
         if getattr(self, "session", None) is not None:
             try:
                 self.session.db.close()
             except Exception:
                 pass
+        release_multicast_lock()
 
     # ---- 工具 ----
     def call_async(self, coro) -> None:

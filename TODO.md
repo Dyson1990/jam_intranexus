@@ -84,26 +84,26 @@
   - 阻塞：—
 
 ## 阶段四 — 跨平台适配
-- [ ] 4.1 Windows 适配（路径、文件选择器、防火墙说明）
+- [x] 4.1 Windows 适配（路径、文件选择器、防火墙说明）
   - 优先级：P1
   - 依赖：3.x
   - 验收：Windows 下功能全通，防火墙放行文档
   - 阻塞：—
-- [ ] 4.2 Android 权限（INTERNET/多播/网络状态、运行时权限）
+- [x] 4.2 Android 权限（INTERNET/多播/网络状态、运行时权限）
   - 优先级：P1
   - 依赖：3.x
-  - 验收：Android 前台运行可发现与收发
+  - 验收：Android 前台运行可发现与收发（真机验证待 5.3）
   - 阻塞：—
-- [ ] 4.3 Android UDP 多播锁 + 文件访问（PyJnius MulticastLock、SAF 文件选择）
+- [x] 4.3 Android UDP 多播锁 + 文件访问（PyJnius MulticastLock、SAF 文件选择）
   - 优先级：P1
   - 依赖：4.2
-  - 验收：多播锁生效，文件选择/保存可用
+  - 验收：多播锁生效，文件选择/保存可用（真机验证待 5.3）
   - 阻塞：—
 - [ ] 4.4 验证 python-for-android 依赖兼容（cryptography 等 recipe）
   - 优先级：P1
   - 依赖：4.2
   - 验收：WSL 内 p4a 构建通过，无缺 recipe 报错
-  - 阻塞：—
+  - 阻塞：需 Linux/WSL + Android SDK/NDK，本机无法执行
 
 ## 阶段五 — 打包与验收
 - [ ] 5.1 生成 Windows EXE（PyInstaller）

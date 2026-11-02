@@ -15,7 +15,7 @@ from kivy.uix.screenmanager import Screen
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 
-from platform import default_name, default_save_dir, pick_directory, pick_file
+from platform import default_name, default_save_dir, pick_directory, pick_file, setup_hints
 from .theme import CYAN, DANGER, DIM, MAGENTA, PANEL, TEXT, NeonButton
 
 
@@ -247,6 +247,10 @@ class SettingsScreen(Screen):
         clear_btn = NeonButton(text="清空本地数据", accent=DANGER, size_hint_y=None, height="52dp")
         clear_btn.bind(on_release=lambda b: self._confirm_clear())
         root.add_widget(clear_btn)
+
+        for hint in setup_hints():
+            root.add_widget(Label(text=hint, color=DIM, font_size="12sp", size_hint_y=None,
+                                  height="30dp", halign="left", valign="middle"))
 
         root.add_widget(Label(text="", size_hint_y=1))
         self.add_widget(root)
