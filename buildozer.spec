@@ -7,7 +7,8 @@ source.include_exts = py,kv
 version = 0.1.0
 
 # 仅运行时依赖；asyncio 为标准库，勿列入。cryptography 未在代码中引用，已移除（见 FEASIBILITY 回退）
-requirements = python3,kivy
+# python3 默认解析到 3.14（pip 26 移除了 BuildDependencyInstallError，会崩），固定到 3.12
+requirements = python3==3.12.10,kivy
 
 orientation = all
 fullscreen = 0
