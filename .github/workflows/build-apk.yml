@@ -29,9 +29,13 @@ jobs:
       - name: Cache Android SDK/NDK
         uses: actions/cache@v4
         with:
-          path: ~/.buildozer
-          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
-          restore-keys: buildozer-${{ runner.os }}-
+          # 只缓存 SDK/NDK（大且稳定）。不缓存 build/ 与 p4a 克隆：否则残留的半成品
+          # hostpython/venv 会污染下次构建，pip 24/25 文件混版导致 open_rich_spinner ImportError
+          path: |
+            ~/.buildozer/android/platform/android-sdk
+            ~/.buildozer/android/platform/android-ndk-r28c
+          key: android-sdk-ndk-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          restore-keys: android-sdk-ndk-${{ runner.os }}-
 
       - name: Build APK
         run: buildozer android debug
