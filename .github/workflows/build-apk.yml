@@ -29,13 +29,20 @@ jobs:
       - name: Cache Android SDK/NDK
         uses: actions/cache@v4
         with:
-          # 只缓存 SDK/NDK（大且稳定）。不缓存 build/ 与 p4a 克隆：否则残留的半成品
-          # hostpython/venv 会污染下次构建，pip 24/25 文件混版导致 open_rich_spinner ImportError
+          # 只缓存 SDK/NDK（大且稳定）。不缓存 build/ 与 p4a 克隆：p4a 需在全新克隆上
+          # 打 pip<25 补丁；open_rich_spinner 根因是 p4a 的 pip install -U pip（24->25 混版），非缓存残留
           path: |
             ~/.buildozer/android/platform/android-sdk
             ~/.buildozer/android/platform/android-ndk-r28c
           key: android-sdk-ndk-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
           restore-keys: android-sdk-ndk-${{ runner.os }}-
+
+      - name: Prepare p4a and patch pip self-upgrade
+        run: |
+          buildozer android update
+          # pip 24 自升级跨越 24->25 会混版（open_rich_spinner ImportError），钉在 <25 走干净升级
+          sed -i "s/pip install -U pip/pip install 'pip<25'/" \
+            ~/.buildozer/android/platform/python-for-android/pythonforandroid/build.py
 
       - name: Build APK
         run: buildozer android debug
